@@ -61,7 +61,10 @@ extras below:
 
 ```bash
 # NVIDIA CUDA 12.8 on Linux/Windows
-uv sync --extra cu128
+uv venv .venv
+. ./.venv/Scripts/acitivate
+uv pip install -r requirements.txt --torch-backend=auto
+
 
 # AMD ROCm on Linux/WSL
 uv sync --extra rocm
@@ -196,7 +199,7 @@ caption conditioning, while `gradio_app.py` includes the Speaker Inversion input
 Start the bundled local inference server:
 
 ```bash
-uv run --no-sync python infer_server.py \
+python infer_server.py \
   --hf-checkpoint Aratako/Irodori-TTS-v4-Small \
   --model-device cuda \
   --codec-device cuda \
@@ -232,7 +235,7 @@ plays them sequentially. It splits input on `。`, `？`, `！`, `?`, and `!`, w
 fetching the next chunk in the background.
 
 ```bash
-uv run --no-sync python client.py \
+python client.py \
   --server-url http://127.0.0.1:8000/infer \
   --text "こんにちは。今日はテストです！順番に再生します？"
 ```
@@ -240,7 +243,7 @@ uv run --no-sync python client.py \
 You can also read from a UTF-8 text file:
 
 ```bash
-uv run --no-sync python client.py \
+python client.py \
   --server-url http://127.0.0.1:8000/infer \
   --text-file input.txt \
   --show-chunks
