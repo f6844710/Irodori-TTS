@@ -971,7 +971,7 @@ wheels = [
 [[package]]
 name = "dacvae"
 version = "1.0.0"
-source = { git = "https://github.com/facebookresearch/dacvae#414c20785fc3a28373073ea8ef7a1316eeeaca6e" }
+source = { url = "https://github.com/facebookresearch/dacvae/archive/414c20785fc3a28373073ea8ef7a1316eeeaca6e.zip" }
 dependencies = [
     { name = "argbind" },
     { name = "descript-audiotools" },
@@ -991,6 +991,33 @@ dependencies = [
     { name = "torchaudio", version = "2.10.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" }, marker = "(python_full_version < '3.11' and extra == 'extra-11-irodori-tts-xpu') or (sys_platform == 'linux' and extra == 'extra-11-irodori-tts-xpu') or (sys_platform == 'win32' and extra == 'extra-11-irodori-tts-xpu') or (extra == 'extra-11-irodori-tts-rocm' and extra == 'extra-11-irodori-tts-xpu') or (extra == 'extra-11-irodori-tts-cpu' and extra == 'extra-11-irodori-tts-cu128') or (extra == 'extra-11-irodori-tts-cpu' and extra == 'extra-11-irodori-tts-rocm') or (extra == 'extra-11-irodori-tts-cpu' and extra == 'extra-11-irodori-tts-xpu') or (extra == 'extra-11-irodori-tts-cu128' and extra == 'extra-11-irodori-tts-rocm') or (extra == 'extra-11-irodori-tts-cu128' and extra == 'extra-11-irodori-tts-xpu')" },
     { name = "tqdm" },
 ]
+sdist = { hash = "sha256:f8ca32de462acc6405d2b07e07f284c56ebddb79e2501b1bb3dd408ac34072b3" }
+
+[package.metadata]
+requires-dist = [
+    { name = "argbind", specifier = ">=0.3.7" },
+    { name = "descript-audiotools", specifier = ">=0.7.2" },
+    { name = "einops" },
+    { name = "encodec", marker = "extra == 'dev'" },
+    { name = "huggingface-hub" },
+    { name = "jupyterlab", marker = "extra == 'dev'" },
+    { name = "numpy" },
+    { name = "onnx", marker = "extra == 'dev'" },
+    { name = "onnx-simplifier", marker = "extra == 'dev'" },
+    { name = "pandas", marker = "extra == 'dev'" },
+    { name = "pesq", marker = "extra == 'dev'" },
+    { name = "psutil", marker = "extra == 'dev'" },
+    { name = "pynvml", marker = "extra == 'dev'" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "seaborn", marker = "extra == 'dev'" },
+    { name = "tabulate", marker = "extra == 'dev'" },
+    { name = "torch" },
+    { name = "torchaudio" },
+    { name = "tqdm" },
+    { name = "watchdog", marker = "extra == 'dev'" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "datasets"
@@ -1965,7 +1992,7 @@ xpu = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dacvae", git = "https://github.com/facebookresearch/dacvae" },
+    { name = "dacvae", url = "https://github.com/facebookresearch/dacvae/archive/414c20785fc3a28373073ea8ef7a1316eeeaca6e.zip" },
     { name = "datasets", specifier = ">=3.0.0" },
     { name = "gradio", specifier = ">=5.0.0" },
     { name = "huggingface-hub", specifier = ">=0.34.0" },
