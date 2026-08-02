@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import queue
 import re
 import threading
@@ -15,6 +16,21 @@ from typing import Any
 _SENTENCE_SPLIT_RE = re.compile(
     r"[^\u3002\uff1f\uff01!?]+[\u3002\uff1f\uff01!?]?|[\u3002\uff1f\uff01!?]"
 )
+
+
+def parse_optional_float(value: str) -> float | None:
+    raw = str(value).strip().lower()
+    if raw in {"none", "null", "off", "disable", "disabled"}:
+        return None
+    try:
+        out = float(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "Expected float or one of [none, null, off, disable, disabled]."
+        ) from exc
+    if not math.isfinite(out):
+        raise argparse.ArgumentTypeError(f"Expected finite float for value={value!r}.")
+    return out
 
 
 def split_text_for_streaming(text: str) -> list[str]:
@@ -91,20 +107,40 @@ def build_base_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "caption": args.caption,
         "no_ref": bool(args.no_ref),
+        "ref_normalize_db": args.ref_normalize_db,
+        "ref_ensure_max": args.ref_ensure_max,
         "num_steps": args.num_steps,
         "cfg_scale_text": args.cfg_scale_text,
         "cfg_scale_caption": args.cfg_scale_caption,
         "cfg_scale_speaker": args.cfg_scale_speaker,
         "cfg_guidance_mode": args.cfg_guidance_mode,
+        "cfg_scale": args.cfg_scale,
+        "cfg_min_t": args.cfg_min_t,
+        "cfg_max_t": args.cfg_max_t,
+        "truncation_factor": args.truncation_factor,
+        "rescale_k": args.rescale_k,
+        "rescale_sigma": args.rescale_sigma,
+        "context_kv_cache": args.context_kv_cache,
         "seconds": args.seconds,
         "duration_scale": args.duration_scale,
+        "speaker_uncond_mode": args.speaker_uncond_mode,
+        "t_schedule_mode": args.t_schedule_mode,
+        "sway_coeff": args.sway_coeff,
+        "trim_tail": args.trim_tail,
+        "tail_window_size": args.tail_window_size,
+        "tail_std_threshold": args.tail_std_threshold,
+        "tail_mean_threshold": args.tail_mean_threshold,
         "seed": args.seed,
     }
 
     if args.ref_wav is not None:
         payload["ref_wav"] = args.ref_wav
+    if args.ref_wavs is not None:
+        payload["ref_wavs"] = args.ref_wavs
     if args.ref_latent is not None:
         payload["ref_latent"] = args.ref_latent
+    if args.ref_latents is not None:
+        payload["ref_latents"] = args.ref_latents
     if args.ref_embed is not None:
         payload["ref_embed"] = args.ref_embed
     if args.max_ref_seconds is not None:
@@ -132,17 +168,28 @@ def load_text(args: argparse.Namespace) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Irodori-TTS infer_server.py client. Split text by 。？！ and play sequentially."
+        description="Irodori-TTS infer_server.py client. Split text by 。！？!? and play sequentially."
     )
     text_group = parser.add_mutually_exclusive_group(required=True)
     text_group.add_argument("--text", default=None, help="Text to speak.")
     text_group.add_argument("--text-file", default=None, help="UTF-8 text file to speak.")
     parser.add_argument("--server-url", default="http://127.0.0.1:8000/infer")
     parser.add_argument("--caption", default=None)
-    parser.add_argument("--ref-wav", default=None)
-    parser.add_argument("--ref-latent", default=None)
-    parser.add_argument("--ref-embed", default=None)
-    parser.add_argument("--no-ref", action="store_true")
+
+    ref_group = parser.add_mutually_exclusive_group(required=False)
+    ref_group.add_argument("--ref-wav", default=None)
+    ref_group.add_argument("--ref-wavs", nargs="+", default=None, metavar="PATH")
+    ref_group.add_argument("--ref-latent", default=None)
+    ref_group.add_argument("--ref-latents", nargs="+", default=None, metavar="PATH")
+    ref_group.add_argument("--ref-embed", default=None)
+    ref_group.add_argument("--no-ref", action="store_true")
+
+    parser.add_argument("--ref-normalize-db", type=parse_optional_float, default=None)
+    parser.add_argument(
+        "--ref-ensure-max",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
     parser.add_argument("--num-steps", type=int, default=40)
     parser.add_argument("--cfg-scale-text", type=float, default=3.0)
     parser.add_argument("--cfg-scale-caption", type=float, default=3.0)
@@ -152,6 +199,17 @@ def main() -> None:
         choices=["independent", "joint", "alternating"],
         default="independent",
     )
+    parser.add_argument("--cfg-scale", type=float, default=None)
+    parser.add_argument("--cfg-min-t", type=float, default=None)
+    parser.add_argument("--cfg-max-t", type=float, default=None)
+    parser.add_argument("--truncation-factor", type=float, default=None)
+    parser.add_argument("--rescale-k", type=float, default=None)
+    parser.add_argument("--rescale-sigma", type=float, default=None)
+    parser.add_argument(
+        "--context-kv-cache",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
     parser.add_argument("--seconds", type=float, default=None)
     parser.add_argument("--duration-scale", type=float, default=1.0)
     parser.add_argument("--max-ref-seconds", type=float, default=None)
@@ -159,6 +217,25 @@ def main() -> None:
     parser.add_argument("--speaker-kv-scale", type=float, default=None)
     parser.add_argument("--speaker-kv-min-t", type=float, default=None)
     parser.add_argument("--speaker-kv-max-layers", type=int, default=None)
+    parser.add_argument(
+        "--speaker-uncond-mode",
+        choices=["mask", "noise"],
+        default=None,
+    )
+    parser.add_argument(
+        "--t-schedule-mode",
+        choices=["linear", "sway"],
+        default=None,
+    )
+    parser.add_argument("--sway-coeff", type=float, default=None)
+    parser.add_argument(
+        "--trim-tail",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
+    parser.add_argument("--tail-window-size", type=int, default=None)
+    parser.add_argument("--tail-std-threshold", type=float, default=None)
+    parser.add_argument("--tail-mean-threshold", type=float, default=None)
     parser.add_argument("--lora-adapter", default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--timeout", type=float, default=300.0)
