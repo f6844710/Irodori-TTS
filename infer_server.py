@@ -409,7 +409,13 @@ class InferRequestHandler(BaseHTTPRequestHandler):
                 {
                     "ok": True,
                     "service": "irodori-tts",
-                    "endpoints": ["GET /health", "GET /info", "POST /infer", "POST /infer/json"],
+                    "endpoints": [
+                        "GET /health",
+                        "GET /info",
+                        "POST /infer",
+                        "POST /infer/json",
+                        "POST /synthesize",
+                    ],
                 },
             )
             return
@@ -419,7 +425,7 @@ class InferRequestHandler(BaseHTTPRequestHandler):
         self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Not found"})
 
     def do_POST(self) -> None:
-        if self.path not in {"/infer", "/infer/json"}:
+        if self.path not in {"/infer", "/infer/json", "/synthesize"}:
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "Not found"})
             return
 
