@@ -6,7 +6,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
-    "dacvae",
+    "dacvae @ https://github.com/facebookresearch/dacvae/archive/414c20785fc3a28373073ea8ef7a1316eeeaca6e.zip",
     "datasets>=3.0.0",
     "gradio>=5.0.0",
     "huggingface-hub>=0.34.0",
@@ -60,6 +60,8 @@ dev = [
 ]
 
 [tool.uv]
+cache-dir = ".uv-cache"
+python-preference = "managed"
 conflicts = [
     [
         { extra = "cpu" },
@@ -91,7 +93,6 @@ triton-rocm = [
 triton-xpu = [
     { index = "pytorch-xpu", extra = "xpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
-dacvae = { git = "https://github.com/facebookresearch/dacvae" }
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
