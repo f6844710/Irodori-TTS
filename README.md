@@ -7,6 +7,8 @@
 Training and inference code for **Irodori-TTS**, a Flow Matching-based Text-to-Speech model. The architecture and training design largely follow [Echo-TTS](https://jordandarefsky.com/blog/2025/echo/), using [DACVAE](https://github.com/facebookresearch/dacvae) continuous latents as the generation target.
 
 For an OpenAI-compatible inference API server, see [Irodori-TTS-Server](https://github.com/Aratako/Irodori-TTS-Server).
+This repository also includes a lightweight local HTTP inference server (`infer_server.py`)
+and a sentence-streaming client (`client.py`) for simple local integrations.
 
 > [!IMPORTANT]
 > `main` tracks the **v4** codebase and is intended for use with the unified **Irodori-TTS-v4-Small** release.
@@ -28,7 +30,7 @@ For model weights and audio samples, please refer to the [Irodori-TTS-v4-Small m
 - **Multi-GPU Training**: Distributed training via `uv run --no-sync torchrun` with gradient accumulation, mixed precision (bf16), and W&B logging
 - **PEFT LoRA Fine-Tuning**: Parameter-efficient adaptation with PEFT/LoRA for released checkpoints
 - **Speaker Inversion**: Learn reusable speaker embedding tokens for a target voice while freezing the base model
-- **Flexible Inference**: CLI, Gradio Web UI, and HuggingFace Hub checkpoint support
+- **Flexible Inference**: CLI, local HTTP server/client, Gradio Web UI, and HuggingFace Hub checkpoint support
 
 ## Architecture
 
@@ -189,6 +191,66 @@ The same hosted v4-Small demo supports VoiceDesign and reference-audio condition
 Both UIs default to `Aratako/Irodori-TTS-v4-Small`. `gradio_app_voicedesign.py` exposes
 caption conditioning, while `gradio_app.py` includes the Speaker Inversion input.
 
+### Local HTTP Server
+
+Start the bundled local inference server:
+
+```bash
+uv run --no-sync python infer_server.py \
+  --hf-checkpoint Aratako/Irodori-TTS-v4-Small \
+  --model-device cuda \
+  --codec-device cuda \
+  --default-ref-wav path/to/reference.wav \
+  --default-ref-auto-create \
+  --port 8000
+```
+
+Available endpoints:
+
+- `GET /health`: basic health check
+- `GET /info`: runtime metadata and default-reference information
+- `POST /infer`: returns `audio/wav`
+- `POST /infer/json`: returns JSON metadata plus base64-encoded WAV
+
+Minimal request example:
+
+```bash
+curl -X POST http://127.0.0.1:8000/infer/json \
+  -H "Content-Type: application/json" \
+  -d "{\"text\":\"こんにちは。Irodori-TTSのローカルサーバーです。\"}"
+```
+
+If the checkpoint uses speaker conditioning, each request must provide one of
+`ref_wav`, `ref_wavs`, `ref_latent`, `ref_latents`, `ref_embed`, or `no_ref=true`.
+When `--default-ref-wav` or `--default-ref-latent` is configured at startup, the server
+uses that default reference automatically when a request omits reference fields.
+
+### Streaming Client
+
+The bundled `client.py` sends text to the local server in sentence-sized chunks and
+plays them sequentially. It splits input on `。`, `？`, `！`, `?`, and `!`, while
+fetching the next chunk in the background.
+
+```bash
+uv run --no-sync python client.py \
+  --server-url http://127.0.0.1:8000/infer \
+  --text "こんにちは。今日はテストです！順番に再生します？"
+```
+
+You can also read from a UTF-8 text file:
+
+```bash
+uv run --no-sync python client.py \
+  --server-url http://127.0.0.1:8000/infer \
+  --text-file input.txt \
+  --show-chunks
+```
+
+`client.py` forwards common inference options such as `--caption`, `--ref-wav`,
+`--ref-latent`, `--ref-embed`, `--no-ref`, `--num-steps`, `--seconds`,
+`--duration-scale`, and `--lora-adapter`. Playback currently uses Windows
+`winsound`, so the bundled playback path is Windows-oriented.
+
 ## Inference
 
 ### CLI
@@ -294,6 +356,36 @@ For tuning guidance and detailed explanations of inference options, see the
 [Parameter Guide](docs/parameters.md).
 
 Generated audio is passed through [SilentCipher](https://github.com/sony/silentcipher) watermarking automatically when the dependency and model files are available.
+
+### HTTP Server Request Format
+
+`infer_server.py` accepts the same core request fields as `infer.py` through JSON.
+The only required field is `text`. Common optional fields include:
+
+- `caption`
+- `ref_wav`, `ref_wavs`
+- `ref_latent`, `ref_latents`
+- `ref_embed`
+- `no_ref`
+- `num_steps`
+- `seconds`
+- `duration_scale`
+- `cfg_scale_text`, `cfg_scale_caption`, `cfg_scale_speaker`
+- `cfg_guidance_mode`
+- `lora_adapter`
+- `seed`
+
+Example request body:
+
+```json
+{
+  "text": "これはHTTPサーバー経由の推論です。",
+  "caption": "落ち着いた読み上げ",
+  "no_ref": true,
+  "num_steps": 20,
+  "duration_scale": 0.9
+}
+```
 
 ## Training
 
@@ -619,6 +711,8 @@ Only the selected model variant and its tokenizer assets are downloaded.
 Irodori-TTS/
 ├── train.py                    # Training entry point (DDP support)
 ├── infer.py                    # CLI inference
+├── infer_server.py             # Local HTTP inference server
+├── client.py                   # Sentence-splitting streaming client
 ├── gradio_app.py               # Gradio web UI
 ├── gradio_app_voicedesign.py   # Gradio web UI for VoiceDesign checkpoints
 ├── prepare_manifest.py         # Dataset -> DACVAE latent preprocessing
