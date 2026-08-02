@@ -7,8 +7,8 @@
 Training and inference code for **Irodori-TTS**, a Flow Matching-based Text-to-Speech model. The architecture and training design largely follow [Echo-TTS](https://jordandarefsky.com/blog/2025/echo/), using [DACVAE](https://github.com/facebookresearch/dacvae) continuous latents as the generation target.
 
 For an OpenAI-compatible inference API server, see [Irodori-TTS-Server](https://github.com/Aratako/Irodori-TTS-Server).
-This repository also includes a lightweight local HTTP inference server (`infer_server.py`)
-and a sentence-streaming client (`client.py`) for simple local integrations.
+This repository also includes a lightweight local HTTP inference server started with
+`python infer_server.py` and a sentence-streaming client (`client.py`) for simple local integrations.
 
 > [!IMPORTANT]
 > `main` tracks the **v4** codebase and is intended for use with the unified **Irodori-TTS-v4-Small** release.
@@ -91,6 +91,10 @@ not provide `triton.language` for the `transformers` to `torch._dynamo` import
 path. This was validated with AMD GPU inference.
 
 ## Quick Start
+
+For local use, start from `python infer_server.py`. The sections below also cover direct
+CLI inference and the Gradio UI, but the bundled server is the recommended startup path
+for local integrations.
 
 ### Simple Inference
 
@@ -196,7 +200,7 @@ caption conditioning, while `gradio_app.py` includes the Speaker Inversion input
 
 ### Local HTTP Server
 
-Start the bundled local inference server:
+Start the bundled local inference server with `python infer_server.py`:
 
 ```bash
 python infer_server.py \
