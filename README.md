@@ -212,6 +212,10 @@ python infer_server.py \
   --port 8000
 ```
 
+If `--model-device` / `--codec-device` are omitted, the server uses the same
+automatic runtime-device selection as `infer.py` and prefers an available GPU/XPU/MPS
+backend before falling back to CPU.
+
 Available endpoints:
 
 - `GET /health`: basic health check
