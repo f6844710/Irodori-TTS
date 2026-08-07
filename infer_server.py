@@ -18,6 +18,7 @@ import torchaudio
 from irodori_tts.inference_runtime import (
     RuntimeKey,
     SamplingRequest,
+    default_runtime_device,
     download_hf_checkpoint,
     get_cached_runtime,
     resolve_cfg_scales,
@@ -491,11 +492,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--lora-adapter", default=None)
-    parser.add_argument("--model-device", default="cpu")
-    parser.add_argument("--model-precision", choices=["fp32", "bf16"], default="fp32")
-    parser.add_argument("--codec-device", default="cpu")
-    parser.add_argument("--codec-precision", choices=["fp32", "bf16"], default="fp32")
+    parser.add_argument(
+        "--lora-adapter",
+        default=None,
+        help=(
+            "Optional PEFT LoRA adapter directory to load dynamically for inference requests. "
+            "The adapter is applied at runtime and is not merged into the base checkpoint."
+        ),
+    )
+    parser.add_argument(
+        "--model-device",
+        default=default_runtime_device(),
+        help="Model inference device (e.g. cuda, mps, xpu, cpu).",
+    )
+    parser.add_argument(
+        "--model-precision",
+        choices=["fp32", "bf16"],
+        default="fp32",
+        help="Model precision for weights/compute.",
+    )
+    parser.add_argument(
+        "--codec-device",
+        default=default_runtime_device(),
+        help="Codec device for reference encode/decode (e.g. cuda, mps, xpu, cpu).",
+    )
+    parser.add_argument(
+        "--codec-precision",
+        choices=["fp32", "bf16"],
+        default="fp32",
+        help="Codec precision for weights/compute.",
+    )
     parser.add_argument(
         "--codec-deterministic-encode",
         action=argparse.BooleanOptionalAction,
@@ -507,15 +533,31 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
     )
     parser.add_argument("--codec-repo", default="Aratako/Semantic-DACVAE-Japanese-32dim")
-    parser.add_argument("--default-ref-wav", default=None)
-    parser.add_argument("--default-ref-latent", default=None)
+    parser.add_argument(
+        "--default-ref-wav",
+        default=None,
+        help="Default reference waveform path for speaker conditioning.",
+    )
+    parser.add_argument(
+        "--default-ref-latent",
+        default=None,
+        help="Default reference latent (.pt) path for speaker conditioning.",
+    )
     parser.add_argument(
         "--default-ref-auto-create",
         action=argparse.BooleanOptionalAction,
         default=False,
         help="If default ref latent is omitted, encode --default-ref-wav once at startup.",
     )
-    parser.add_argument("--max-ref-seconds", type=float, default=None)
+    parser.add_argument(
+        "--max-ref-seconds",
+        type=float,
+        default=None,
+        help=(
+            "Maximum reference duration in seconds. By default, use the checkpoint "
+            "recommendation (30 seconds for legacy checkpoints). Set <=0 to disable the cap."
+        ),
+    )
     parser.add_argument("--ref-normalize-db", type=_parse_optional_float, default=-16.0)
     parser.add_argument(
         "--ref-ensure-max",
